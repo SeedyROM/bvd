@@ -29,8 +29,9 @@ cd bvd
 # Install in development mode with all dependencies
 uv sync --dev
 
-# Or install just the package
-uv add bvd
+# TODO(SeedyROM): This is wrong!
+# # Or install just the package
+# uv add bvd
 ```
 
 ### 🐍 Using pip
