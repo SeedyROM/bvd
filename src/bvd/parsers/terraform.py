@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, List
 import hcl2
 
 # Avoid circular import issues
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ..core import VersionChange
 
 

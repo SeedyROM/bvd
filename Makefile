@@ -1,4 +1,4 @@
-.PHONY: help format lint lint-fix test run
+.PHONY: help format lint lint-fix test test-cov test-cov-xml run
 
 # Default target - show help
 help: ## Show this help message
@@ -28,7 +28,13 @@ lint-fix: ## Fix code style issues automatically
 	uv run ruff check --fix src/ tests/
 
 test: ## Run all tests with pytest
-	uv run pytest tests/
+	uv run pytest tests/ $(filter-out $@,$(MAKECMDGOALS))
+
+test-cov: ## Run tests with coverage report
+	uv run pytest --cov=bvd --cov-report=term-missing --cov-report=html tests/ $(filter-out $@,$(MAKECMDGOALS))
+
+test-cov-xml: ## Run tests with XML coverage report for CI
+	uv run pytest --cov=bvd --cov-report=xml tests/ $(filter-out $@,$(MAKECMDGOALS))
 
 run: ## Run bvd with arguments (e.g., make run -- --files example.tf)
 	uv run bvd $(filter-out $@,$(MAKECMDGOALS))

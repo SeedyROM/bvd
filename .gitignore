@@ -11,3 +11,8 @@ wheels/
 
 # Ignore LLM guidlines
 CLAUDE.md
+
+# Test coverage
+.coverage
+.coverage.*
+htmlcov/

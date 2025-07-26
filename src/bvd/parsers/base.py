@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
 # Avoid circular import issues
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from ..core import VersionChange
 
 
-class DependencyParser(ABC):
+class DependencyParser(ABC):  # pragma: no cover
     """Abstract base class for dependency file parsers"""
 
     @property
