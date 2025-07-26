@@ -41,6 +41,23 @@ pip install bvd
 ## 🎮 Usage
 
 ### 💻 Command Line Interface
+
+#### Using Makefile (Development Environment) 🛠️
+```bash
+# Run on specific files
+make run -- --files example.tf
+
+# Run on multiple files
+make run -- --files config.tf variables.tf
+
+# Show help
+make run -- --help
+
+# Run with verbose output
+make run -- --files example.tf --verbose
+```
+
+#### Direct Usage 🎯
 ```bash
 # Run on specific files
 uv run bvd --files example.tf
