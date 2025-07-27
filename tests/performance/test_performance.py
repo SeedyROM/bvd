@@ -1,5 +1,6 @@
 """
-Performance and stress tests for BVD
+Performance and stress tests for BVD, not required but useful for ensuring robustness under load.
+These tests cover large files, multiple files, and stress conditions.
 """
 
 import tempfile
