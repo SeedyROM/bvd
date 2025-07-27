@@ -6,8 +6,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from bvd import IssueType, Severity, VersionDetector
 from bvd.parsers.terraform import TerraformParser
 
@@ -168,14 +166,14 @@ terraform {
         ]
 
         for constraint, expected in bound_cases:
-            assert (
-                parser.is_version_bound(constraint) == expected
-            ), f"Failed for bound case '{constraint}'"
+            assert parser.is_version_bound(constraint) == expected, (
+                f"Failed for bound case '{constraint}'"
+            )
 
         for constraint, expected in unbound_cases:
-            assert (
-                parser.is_version_bound(constraint) == expected
-            ), f"Failed for unbound case '{constraint}'"
+            assert parser.is_version_bound(constraint) == expected, (
+                f"Failed for unbound case '{constraint}'"
+            )
 
     def test_file_reading_errors(self):
         """Test handling of file reading errors"""
@@ -393,5 +391,3 @@ class TestParserEdgeCases:
                 assert parser.name == "Terraform"
             else:
                 assert parser is None, f"Should not find parser for {filename}"
-
-

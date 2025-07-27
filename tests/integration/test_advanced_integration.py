@@ -7,8 +7,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from bvd import IssueType, Severity, VersionDetector
 
 
@@ -464,5 +462,3 @@ class TestGitIntegrationScenarios:
                     # Should handle various git ref formats gracefully
                     issues = detector.detect_issues(base_ref=ref)
                     assert isinstance(issues, list)
-
-

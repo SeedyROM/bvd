@@ -7,8 +7,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from bvd import IssueType, VersionDetector
 
 
@@ -288,5 +286,3 @@ class TestVersionChangeAnalysis:
 
         result = detector.analyze_version_change("1.0.0-rc1", "1.1.0")
         assert result == IssueType.MINOR_VERSION_BUMP
-
-

@@ -199,5 +199,3 @@ def test_detect_issues_exception_handling():
     finally:
         sys.stderr = old_stderr
         temp_path.unlink()
-
-

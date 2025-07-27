@@ -5,7 +5,7 @@ terraform {
       version = ">= 4.0.0"  # This is UNBOUND - dangerous!
     }
     kubernetes = {
-      source  = "hashicorp/kubernetes" 
+      source  = "hashicorp/kubernetes"
       version = "~> 2.0"    # This is BOUND - safe
     }
     random = {

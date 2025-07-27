@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from bvd import IssueType, Severity
@@ -406,5 +405,3 @@ terraform {
             # Should show warning count message
             assert "⚠️  Found 1 warnings" in result.output
             assert result.exit_code == 0
-
-

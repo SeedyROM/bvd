@@ -75,7 +75,7 @@ uv run bvd --help
 This project uses `uv` for dependency management and `make` for common development tasks: ⚙️
 
 - `make format` - Format code with black ✨
-- `make lint` - Check code style and quality with ruff 🔍  
+- `make lint` - Check code style and quality with ruff 🔍
 - `make lint-fix` - Fix code style issues automatically 🔧
 - `make test` - Run all tests with pytest 🧪
 - `make run -- --files example.tf` - Run bvd on specific files 🎯
@@ -110,7 +110,7 @@ To add support for new file formats, create a parser in `src/bvd/parsers/` that 
 ## 📚 Dependencies
 
 - **packaging** - For semver parsing and comparison 📦
-- **python-hcl2** - For parsing Terraform HCL files 🏗️  
+- **python-hcl2** - For parsing Terraform HCL files 🏗️
 - **click** - For CLI interface 🖱️
 
 ## 🧪 Testing

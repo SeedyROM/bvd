@@ -121,5 +121,3 @@ class TestAbstractMethodEnforcement:
         assert parser.is_version_bound("~> 1.0.0") is True
         assert parser.is_version_bound(">= 1.0.0") is False
         assert parser.extract_version("~> 2.1.0") == "2.1.0"
-
-

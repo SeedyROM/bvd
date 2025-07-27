@@ -143,5 +143,3 @@ terraform {
 
         finally:
             temp_path.unlink()
-
-

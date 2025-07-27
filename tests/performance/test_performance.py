@@ -385,5 +385,3 @@ class TestMemoryUsage:
         finally:
             for temp_file in temp_files:
                 temp_file.unlink()
-
-
