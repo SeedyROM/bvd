@@ -84,7 +84,9 @@ This project uses `uv` for dependency management and `make` for common developme
 - `make run -- --files example.tf` - Run bvd on specific files
 - `make run -- --help` - Show bvd help
 
-#### 🔗 Pre-commit Hooks
+**See [Makefile](Makefile) for all available/source of truth commands on POSIX systems.**
+
+### 🔗 Pre-commit Hooks
 
 The project uses pre-commit hooks to automatically check code quality before commits:
 
@@ -102,14 +104,11 @@ Pre-commit hooks will automatically run on every commit and check for:
 - Common issues (trailing whitespace, large files, etc.)
 - All tests must pass
 
-**See [Makefile](Makefile) for all available/source of truth commands on POSIX systems.**
-
 ## ✨ Features
 
-- **Multi-format Support**: Extensible parser system supports Terraform and more
+- **Multi-format Support**: Extensible parser system supports Terraform and (eventually) more
 - **Git Integration**: Analyzes changes between git references
 - **Severity Levels**: Configurable issue severity and critical package detection
-- **Comprehensive Testing**: 97.99% test coverage with performance and integration tests
 
 ## 📄 Supported File Formats
 
