@@ -22,6 +22,14 @@ class Severity(Enum):
     ERROR = "error"
     CRITICAL = "critical"
 
+    def to_emoji(self) -> str:
+        return {
+            Severity.INFO: "ℹ️",
+            Severity.WARNING: "⚠️",
+            Severity.ERROR: "❌",
+            Severity.CRITICAL: "🚨",
+        }[self]
+
 
 class IssueType(Enum):
     MAJOR_VERSION_BUMP = "major_version_bump"
@@ -283,7 +291,7 @@ class VersionDetector:
 
         return issues
 
-    def report_issues(self, issues: List[Issue], format: str = "text") -> str:
+    def report_issues(self, issues: List[Issue], format: str = "") -> str:
         """Generate report of issues"""
         if format == "json":
             return json.dumps(
@@ -304,14 +312,9 @@ class VersionDetector:
         # Text format
         report = []
         for issue in issues:
-            icon = {
-                Severity.INFO: "ℹ️",
-                Severity.WARNING: "⚠️",
-                Severity.ERROR: "❌",
-                Severity.CRITICAL: "🚨",
-            }[issue.severity]
-
-            report.append(f"{icon} {issue.severity.value.upper()}: {issue.message}")
+            report.append(
+                f"{issue.severity.to_emoji()} {issue.severity.value.upper()}: {issue.message}"
+            )
             report.append(f"   File: {issue.change.file_path}")
             report.append(f"   Package: {issue.change.package_name}")
             if issue.suggestion:
