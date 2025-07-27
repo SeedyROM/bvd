@@ -1,12 +1,12 @@
 # 🚨 BVD (Breaking Version Detector) 🔍
 
-An extensible tool for detecting breaking dependency version changes in configuration files. BVD analyzes git diffs to identify potentially dangerous version upgrades and unbound version constraints that could lead to unexpected breaking changes. ⚡
+An extensible tool for detecting breaking dependency version changes in configuration files. BVD analyzes git diffs to identify potentially dangerous version upgrades and unbound version constraints that could lead to unexpected breaking changes.
 
 ## 📦 Installation
 
 ### 🚀 Using uv (Recommended)
 
-BVD uses [uv](https://docs.astral.sh/uv/) for fast, reliable Python dependency management. ⚡
+BVD uses [uv](https://docs.astral.sh/uv/) for fast, reliable Python dependency management.
 
 #### 🛠️ Install uv first:
 ```bash
@@ -72,46 +72,45 @@ uv run bvd --help
 
 ### 🔧 Development Commands
 
-This project uses `uv` for dependency management and `make` for common development tasks: ⚙️
+This project uses `uv` for dependency management and `make` for common development tasks:
 
-- `make format` - Format code with black ✨
-- `make lint` - Check code style and quality with ruff 🔍
-- `make lint-fix` - Fix code style issues automatically 🔧
-- `make test` - Run all tests with pytest 🧪
-- `make run -- --files example.tf` - Run bvd on specific files 🎯
-- `make run -- --help` - Show bvd help ❓
+- `make format` - Format code with black
+- `make lint` - Check code style and quality with ruff
+- `make lint-fix` - Fix code style issues automatically
+- `make test` - Run all tests with pytest
+- `make run -- --files example.tf` - Run bvd on specific files
+- `make run -- --help` - Show bvd help
 
-
-**See [Makefile](Makefile) for all available/source of truth commands on POSIX systems.** 📋
+**See [Makefile](Makefile) for all available/source of truth commands on POSIX systems.**
 
 ## ✨ Features
 
-- **Multi-format Support**: Extensible parser system supports Terraform and more 🔧
-- **Git Integration**: Analyzes changes between git references 🌳
-- **Severity Levels**: Configurable issue severity and critical package detection ⚠️
-- **Comprehensive Testing**: 97.99% test coverage with performance and integration tests 🎯
+- **Multi-format Support**: Extensible parser system supports Terraform and more
+- **Git Integration**: Analyzes changes between git references
+- **Severity Levels**: Configurable issue severity and critical package detection
+- **Comprehensive Testing**: 97.99% test coverage with performance and integration tests
 
 ## 📄 Supported File Formats
 
-- [x] **Terraform** (`.tf`) - Provider version detection and analysis 🏗️
-- [ ] **Python** (`requirements.txt`, `pyproject.toml`) - Dependency version analysis 🐍
+- [x] **Terraform** (`.tf`) - Provider version detection and analysis
+- [ ] **Python** (`requirements.txt`, `pyproject.toml`) - Dependency version analysis
 
 
 ## 🔌 Extensions
 
-To add support for new file formats, create a parser in `src/bvd/parsers/` that inherits from `DependencyParser`. 🛠️
+To add support for new file formats, create a parser in `src/bvd/parsers/` that inherits from `DependencyParser`
 
 ## 📚 Dependencies
 
-- **packaging** - For semver parsing and comparison 📦
-- **python-hcl2** - For parsing Terraform HCL files 🏗️
-- **click** - For CLI interface 🖱️
+- **packaging** - For semver parsing and comparison
+- **python-hcl2** - For parsing Terraform HCL files
+- **click** - For CLI interface
 
 ## 🧪 Testing
 
-Run the comprehensive test suite: 🚀
+Run the comprehensive test suite:
 ```bash
-make test              # Run all tests 🧪
-make test-cov          # Run with coverage report 📊
-make test -- --verbose # Verbose test output 📢
+make test              # Run all tests
+make test-cov          # Run with coverage report
+make test -- --verbose # Verbose test output
 ```
