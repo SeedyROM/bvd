@@ -34,10 +34,6 @@ class TerraformParser(DependencyParser):
 
         changes = []
 
-        if hcl2 is None:
-            print("Warning: python-hcl2 not installed, skipping HCL parsing", file=sys.stderr)
-            return changes
-
         try:
             # Parse HCL content
             parsed = hcl2.loads(content)
