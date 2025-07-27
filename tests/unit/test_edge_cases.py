@@ -395,5 +395,3 @@ class TestParserEdgeCases:
                 assert parser is None, f"Should not find parser for {filename}"
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

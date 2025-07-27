@@ -201,12 +201,3 @@ def test_detect_issues_exception_handling():
         temp_path.unlink()
 
 
-if __name__ == "__main__":
-    test_version_detector()
-    test_issue_detection()
-    test_detect_issues_no_matching_parser()
-    test_detect_issues_processing_error()
-    test_version_detector_custom_config_merge()
-    test_issue_suggestions_formatting()
-    test_detect_issues_exception_handling()
-    print("\n🎉 All core tests passed!")

@@ -466,5 +466,3 @@ class TestGitIntegrationScenarios:
                     assert isinstance(issues, list)
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

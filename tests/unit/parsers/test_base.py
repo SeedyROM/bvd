@@ -123,5 +123,3 @@ class TestAbstractMethodEnforcement:
         assert parser.extract_version("~> 2.1.0") == "2.1.0"
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

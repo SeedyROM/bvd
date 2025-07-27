@@ -145,9 +145,3 @@ terraform {
             temp_path.unlink()
 
 
-if __name__ == "__main__":
-    test_terraform_parser()
-    test_terraform_file_parsing()
-    test_terraform_parser_complex_provider_structure()
-    test_terraform_parser_without_hcl2()
-    print("\n🎉 All terraform parser tests passed!")
