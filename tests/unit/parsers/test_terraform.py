@@ -145,27 +145,9 @@ terraform {
             temp_path.unlink()
 
 
-def test_terraform_type_checking_imports():
-    """Test TYPE_CHECKING import coverage in terraform parser"""
-
-    # Test that TYPE_CHECKING is False at runtime
-    from bvd.parsers.terraform import TYPE_CHECKING
-
-    assert TYPE_CHECKING is False
-
-    # Test forcing the TYPE_CHECKING import to be executed
-    with patch("bvd.parsers.terraform.TYPE_CHECKING", True):
-        import importlib
-
-        import bvd.parsers.terraform
-
-        importlib.reload(bvd.parsers.terraform)
-
-
 if __name__ == "__main__":
     test_terraform_parser()
     test_terraform_file_parsing()
     test_terraform_parser_complex_provider_structure()
     test_terraform_parser_without_hcl2()
-    test_terraform_type_checking_imports()
     print("\n🎉 All terraform parser tests passed!")

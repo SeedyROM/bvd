@@ -5,11 +5,9 @@ Abstract base classes for dependency parsers
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
-# Avoid circular import issues
-if TYPE_CHECKING:  # pragma: no cover
-    from ..core import VersionChange
+from ..types import VersionChange
 
 
 class DependencyParser(ABC):  # pragma: no cover

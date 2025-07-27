@@ -5,15 +5,11 @@ Terraform provider dependency parser
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, List
+from typing import List
 
 import hcl2
 
-# Avoid circular import issues
-if TYPE_CHECKING:  # pragma: no cover
-    from ..core import VersionChange
-
-
+from ..types import VersionChange
 from .base import DependencyParser
 
 
