@@ -93,17 +93,11 @@ This project uses `uv` for dependency management and `make` for common developme
 
 ## 📄 Supported File Formats
 
-- **Terraform** (`.tf`) - Provider version detection and analysis 🏗️
+- [x] **Terraform** (`.tf`) - Provider version detection and analysis 🏗️
+- [ ] **Python** (`requirements.txt`, `pyproject.toml`) - Dependency version analysis 🐍
 
-## 🏛️ Architecture
 
-### ⚙️ Core Components
-
-- **`src/bvd/core.py`** - Main logic with `VersionDetector` class 🧠
-- **`src/bvd/cli.py`** - Click-based command-line interface 💻
-- **`src/bvd/parsers/`** - Extensible parser system for different file formats 🔧
-
-### 🔌 Extension
+## 🔌 Extensions
 
 To add support for new file formats, create a parser in `src/bvd/parsers/` that inherits from `DependencyParser`. 🛠️
 
