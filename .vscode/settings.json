@@ -1,8 +1,11 @@
 {
-  "python.testing.pytestArgs": ["tests"],
+  "python.testing.pytestArgs": [
+    "tests",
+    "--cov=bvd",
+    "--cov-report=term-missing"
+  ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
   "python.defaultInterpreterPath": "./.venv/bin/python",
-  "python.terminal.activateEnvironment": true,
-  "python.languageServer": "Pylance"
+  "python.terminal.activateEnvironment": true
 }
