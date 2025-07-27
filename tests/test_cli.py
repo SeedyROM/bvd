@@ -383,6 +383,30 @@ terraform {
         finally:
             temp_path.unlink()
 
+    def test_cli_verbose_warnings_only(self):
+        """Test CLI verbose output when only warnings are found (coverage completion)"""
+        runner = CliRunner()
+
+        warning_issue = Issue(
+            severity=Severity.WARNING,
+            issue_type=IssueType.MINOR_VERSION_BUMP,
+            message="Warning issue",
+            change=VersionChange("test", "1.0.0", "1.1.0", "~> 1.0.0", "~> 1.1.0", "test.tf"),
+        )
+
+        with patch("bvd.cli.VersionDetector") as mock_detector_class:
+            mock_detector = MagicMock()
+            mock_detector_class.return_value = mock_detector
+            mock_detector.get_changed_files.return_value = [Path("test.tf")]
+            mock_detector.detect_issues.return_value = [warning_issue]
+            mock_detector.report_issues.return_value = "Warning found"
+
+            result = runner.invoke(main, ["--verbose"])
+
+            # Should show warning count message
+            assert "⚠️  Found 1 warnings" in result.output
+            assert result.exit_code == 0
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
