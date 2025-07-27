@@ -29,6 +29,9 @@ cd bvd
 # Install in development mode with all dependencies
 uv sync --dev
 
+# Set up pre-commit hooks for automatic code quality checks
+uv run pre-commit install
+
 # TODO(SeedyROM): This is wrong!
 # # Or install just the package
 # uv add bvd
@@ -74,12 +77,30 @@ uv run bvd --help
 
 This project uses `uv` for dependency management and `make` for common development tasks:
 
-- `make format` - Format code with black
+- `make format` - Format code with ruff
 - `make lint` - Check code style and quality with ruff
 - `make lint-fix` - Fix code style issues automatically
 - `make test` - Run all tests with pytest
 - `make run -- --files example.tf` - Run bvd on specific files
 - `make run -- --help` - Show bvd help
+
+#### 🔗 Pre-commit Hooks
+
+The project uses pre-commit hooks to automatically check code quality before commits:
+
+```bash
+# Run hooks manually on all files
+uv run pre-commit run --all-files
+
+# Update hooks to latest versions
+uv run pre-commit autoupdate
+```
+
+Pre-commit hooks will automatically run on every commit and check for:
+- Code formatting (Ruff)
+- Linting (Ruff)
+- Common issues (trailing whitespace, large files, etc.)
+- All tests must pass
 
 **See [Makefile](Makefile) for all available/source of truth commands on POSIX systems.**
 
