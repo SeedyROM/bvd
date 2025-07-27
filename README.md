@@ -2,13 +2,13 @@
 
 An extensible tool for detecting breaking dependency version changes in configuration files. BVD analyzes git diffs to identify potentially dangerous version upgrades and unbound version constraints that could lead to unexpected breaking changes.
 
-## 📦 Installation
+## 📦 Development
 
 ### 🚀 Using uv (Recommended)
 
 BVD uses [uv](https://docs.astral.sh/uv/) for fast, reliable Python dependency management.
 
-#### 🛠️ Install uv first:
+### 🛠️ Install uv first:
 ```bash
 # On macOS and Linux
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -20,7 +20,7 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 pip install uv
 ```
 
-#### 🎯 Install BVD:
+<!-- #### 🎯 Install BVD locally:
 ```bash
 # Clone the repository
 git clone https://github.com/SeedyROM/bvd
@@ -40,13 +40,11 @@ uv run pre-commit install
 ### 🐍 Using pip
 ```bash
 pip install bvd
-```
-
-## 🎮 Usage
+``` -->
 
 ### 💻 Command Line Interface
 
-#### Using Makefile (Development Environment) 🛠️
+### Using Makefile (Development Environment) 🛠️
 ```bash
 # Run on specific files
 make run -- --files example.tf
@@ -61,7 +59,7 @@ make run -- --help
 make run -- --files example.tf --verbose
 ```
 
-#### Direct Usage 🎯
+### Direct Usage 🎯
 ```bash
 # Run on specific files
 uv run bvd --files example.tf
