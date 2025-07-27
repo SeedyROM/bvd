@@ -21,8 +21,8 @@ help: ## Show this help message
 # Make help the default target
 .DEFAULT_GOAL := help
 
-format: ## Format code with black
-	uv run black src/ tests/
+format: ## Format code with ruff
+	uv run ruff format src/ tests/
 
 lint: ## Check code style and quality with ruff
 	uv run ruff check src/ tests/
