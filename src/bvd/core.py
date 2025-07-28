@@ -8,10 +8,9 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from packaging import version
-
 from .parsers.base import DependencyParser
 from .parsers.terraform import TerraformParser
+from .semver import compare_versions
 from .types import Issue, IssueType, Severity, VersionChange
 
 
@@ -139,20 +138,19 @@ class VersionDetector:
 
     def analyze_version_change(self, old_ver: str, new_ver: str) -> Optional[IssueType]:
         """Analyze version change and return issue type if any"""
-        try:
-            old_v = version.parse(old_ver)
-            new_v = version.parse(new_ver)
-
-            if new_v.major > old_v.major:
-                return IssueType.MAJOR_VERSION_BUMP
-            elif new_v.minor > old_v.minor:
-                return IssueType.MINOR_VERSION_BUMP
-            elif new_v.micro > old_v.micro:
-                return IssueType.PATCH_VERSION_BUMP
-
-        except version.InvalidVersion:
+        version_diff = compare_versions(old_ver, new_ver)
+        if version_diff is None:
             # Handle non-semver versions
-            pass
+            return None
+
+        major_diff, minor_diff, patch_diff = version_diff
+
+        if major_diff > 0:
+            return IssueType.MAJOR_VERSION_BUMP
+        elif minor_diff > 0:
+            return IssueType.MINOR_VERSION_BUMP
+        elif patch_diff > 0:
+            return IssueType.PATCH_VERSION_BUMP
 
         return None
 

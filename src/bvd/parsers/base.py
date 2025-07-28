@@ -2,11 +2,11 @@
 Abstract base classes for dependency parsers
 """
 
-import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Optional
 
+from ..semver import extract_version_from_constraint
 from ..types import VersionChange
 
 
@@ -37,7 +37,5 @@ class DependencyParser(ABC):  # pragma: no cover
 
     def extract_version(self, constraint: str) -> Optional[str]:
         """Extract actual version from constraint string"""
-        # Default implementation - override if needed
-        semver_pattern = r"(\d+\.\d+\.\d+(?:-[a-zA-Z0-9\-\.]+)?)"
-        match = re.search(semver_pattern, constraint)
-        return match.group(1) if match else None
+        # Default implementation uses shared semver utility - override if needed
+        return extract_version_from_constraint(constraint)

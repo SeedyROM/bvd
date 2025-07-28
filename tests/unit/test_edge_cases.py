@@ -135,7 +135,10 @@ terraform {
             ("1.5.2", "1.5.2"),
             ("v1.2.3", "1.2.3"),
             ("1.0.0-alpha.1", "1.0.0-alpha.1"),
-            ("~> 1.0", None),  # Invalid semver format
+            ("~> 1.0", "1.0"),  # Valid incomplete semver format
+            ("~> 1", "1"),  # Valid major-only version (normalized to 1.0.0)
+            ("~> A.B.C", None),  # Invalid semver format
+            ("~> #.@.!", None),  # Invalid characters
             ("latest", None),  # Non-version string
             ("", None),  # Empty string
         ]
@@ -150,8 +153,11 @@ terraform {
 
         bound_cases = [
             ("~> 1.0.0", True),
+            ("~> 1.0", True),  # Incomplete version support
+            ("~> 1", True),  # Major-only version support
             ("= 1.2.3", True),
-            ('"1.2.3"', True),
+            ("= 1.2", True),  # Incomplete version support
+            ("1.2", True),  # Plain incomplete version
             ("~>1.0.0", True),  # No spaces
             ("  ~> 1.0.0  ", True),  # Extra whitespace
         ]

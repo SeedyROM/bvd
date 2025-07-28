@@ -9,6 +9,7 @@ from typing import List
 
 import hcl2
 
+from ..semver import extract_version_from_constraint, is_valid_semver
 from ..types import VersionChange
 from .base import DependencyParser
 
@@ -66,27 +67,31 @@ class TerraformParser(DependencyParser):
 
     def is_version_bound(self, constraint: str) -> bool:
         """Check if Terraform version constraint properly bounds major version"""
-        # Unbound patterns
+        constraint = constraint.strip()
+
+        # Unbound patterns that don't limit major version upgrades
         unbound_patterns = [
-            r"^\s*>=\s*\d+\.\d+",  # >= without upper bound
-            r"^\s*>\s*\d+\.\d+",  # > without upper bound
+            r"^\s*>=\s*",  # >= without upper bound
+            r"^\s*>\s*",  # > without upper bound
             r"^\s*\*\s*$",  # Just *
         ]
 
         for pattern in unbound_patterns:
-            if re.match(pattern, constraint.strip()):
+            if re.match(pattern, constraint):
                 return False
 
-        # Properly bound patterns
-        bound_patterns = [
-            r"^\s*~>\s*\d+\.\d+",  # ~> pessimistic operator
-            r"^\s*=\s*\d+\.\d+\.\d+",  # Exact version
-            r'^\s*"\s*\d+\.\d+\.\d+\s*"',  # Quoted exact version
-            r"^\s*\d+\.\d+\.\d+\s*$",  # Plain exact version without operator
+        # Check if we have a bound operator and valid version
+        bound_operators = [
+            r"^\s*~>\s*",  # ~> pessimistic operator
+            r"^\s*=\s*",  # = exact version
+            r"^\s*\d+",  # plain version without operator
         ]
 
-        for pattern in bound_patterns:
-            if re.match(pattern, constraint.strip()):
-                return True
+        for operator_pattern in bound_operators:
+            if re.match(operator_pattern, constraint):
+                # Extract the version part and validate it
+                version_str = extract_version_from_constraint(constraint)
+                if version_str and is_valid_semver(version_str):
+                    return True
 
         return False
