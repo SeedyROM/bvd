@@ -164,86 +164,50 @@ class VersionDetector:
             file_paths = self.get_changed_files(base_ref)
 
         issues = []
-
         for file_path in file_paths:
-            parser = self.find_matching_parser(file_path)
-            if not parser:
-                continue
+            issues.extend(self._process_file_for_issues(file_path, base_ref))
 
-            try:
-                # Get dependency changes with old/new version info
-                changes = self.get_dependency_changes(file_path, base_ref)
+        return issues
 
-                for change in changes:
-                    # Skip ignored packages
-                    ignore_packages = self.config.get("ignore_packages") or []
-                    if change.package_name in ignore_packages:
-                        continue
+    def _process_file_for_issues(self, file_path: Path, base_ref: str) -> List[Issue]:
+        """Process a single file and return any issues found"""
+        parser = self.find_matching_parser(file_path)
+        if not parser:
+            return []
 
-                    # Check for unbound versions
-                    if not parser.is_version_bound(change.new_constraint):
-                        severity = self.config["rules"][IssueType.UNBOUND_VERSION]
-                        # Upgrade severity for critical packages
-                        critical_packages = self.config.get("critical_packages") or {}
-                        if change.package_name in critical_packages:
-                            severity = critical_packages[change.package_name]
+        try:
+            changes = self.get_dependency_changes(file_path, base_ref)
+            issues = []
 
-                        # Special handling for wildcard constraints
-                        if change.new_constraint.strip() == "*":
-                            suggestion = (
-                                "Wildcard constraints are strictly forbidden. "
-                                "Use a specific version like '= 1.2.3' or a bounded constraint "
-                                "like '~> 1.2'"
-                            )
-                        else:
-                            suggestion = (
-                                f"Consider using '~> {change.new_version}' to bound to major "
-                                "version"
-                            )
+            for change in changes:
+                if self._should_ignore_package(change.package_name):
+                    continue
 
-                        issues.append(
-                            Issue(
-                                severity=severity,
-                                issue_type=IssueType.UNBOUND_VERSION,
-                                message=f"Unbound version constraint '{change.new_constraint}' "
-                                f"for {change.package_name}",
-                                change=change,
-                                suggestion=suggestion,
-                            )
-                        )
+                issues.extend(self._process_dependency_change(change, parser))
 
-                    # Check for version changes (if old version exists)
-                    if change.old_version and change.old_version != change.new_version:
-                        issue_type = self.analyze_version_change(
-                            change.old_version, change.new_version
-                        )
-                        if issue_type:
-                            severity = self.config["rules"][issue_type]
-                            # Upgrade severity for critical packages
-                            critical_packages = self.config.get("critical_packages") or {}
-                            if change.package_name in critical_packages:
-                                severity = critical_packages[change.package_name]
+            return issues
 
-                            issues.append(
-                                Issue(
-                                    severity=severity,
-                                    issue_type=issue_type,
-                                    message=(
-                                        f"{issue_type.value.replace('_', ' ').title()} detected: "
-                                        f"{change.package_name} changed from {change.old_version} "
-                                        f"to {change.new_version}"
-                                    ),
-                                    change=change,
-                                    suggestion=(
-                                        f"Review breaking changes in {change.package_name} "
-                                        f"changelog between versions {change.old_version} and "
-                                        f"{change.new_version}"
-                                    ),
-                                )
-                            )
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}", file=sys.stderr)
+            return []
 
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}", file=sys.stderr)
+    def _process_dependency_change(
+        self, change: VersionChange, parser: DependencyParser
+    ) -> List[Issue]:
+        """Process a single dependency change and return any issues found"""
+        issues = []
+
+        # Check for unbound versions
+        if not parser.is_version_bound(change.new_constraint):
+            issue = self._create_unbound_version_issue(change)
+            if issue:
+                issues.append(issue)
+
+        # Check for version changes
+        if change.old_version and change.old_version != change.new_version:
+            issue = self._create_version_change_issue(change)
+            if issue:
+                issues.append(issue)
 
         return issues
 
@@ -278,3 +242,69 @@ class VersionDetector:
             report.append("")
 
         return "\n".join(report)
+
+    def _should_ignore_package(self, package_name: str) -> bool:
+        """Check if a package should be ignored based on configuration"""
+        ignore_packages = self.config.get("ignore_packages") or []
+        return package_name in ignore_packages
+
+    def _resolve_severity(self, base_severity: Severity, package_name: str) -> Severity:
+        """Resolve final severity, considering critical package overrides"""
+        critical_packages = self.config.get("critical_packages") or {}
+        if package_name in critical_packages:
+            return critical_packages[package_name]
+        return base_severity
+
+    def _create_unbound_version_issue(self, change: VersionChange) -> Optional[Issue]:
+        """Create an issue for unbound version constraints"""
+        base_severity = self.config["rules"][IssueType.UNBOUND_VERSION]
+        severity = self._resolve_severity(base_severity, change.package_name)
+        suggestion = self._get_unbound_constraint_suggestion(change)
+        message = f"Unbound version constraint '{change.new_constraint}' for {change.package_name}"
+
+        return Issue(
+            severity=severity,
+            issue_type=IssueType.UNBOUND_VERSION,
+            message=message,
+            change=change,
+            suggestion=suggestion,
+        )
+
+    def _create_version_change_issue(self, change: VersionChange) -> Optional[Issue]:
+        """Create an issue for version changes"""
+        # This method should only be called when old_version is not None
+        assert change.old_version is not None, "old_version should not be None"
+        issue_type = self.analyze_version_change(change.old_version, change.new_version)
+        if not issue_type:  # pragma: no cover
+            return None
+
+        base_severity = self.config["rules"][issue_type]
+        severity = self._resolve_severity(base_severity, change.package_name)
+
+        message = (
+            f"{issue_type.value.replace('_', ' ').title()} detected: "
+            f"{change.package_name} changed from {change.old_version} to {change.new_version}"
+        )
+
+        suggestion = (
+            f"Review breaking changes in {change.package_name} changelog "
+            f"between versions {change.old_version} and {change.new_version}"
+        )
+
+        return Issue(
+            severity=severity,
+            issue_type=issue_type,
+            message=message,
+            change=change,
+            suggestion=suggestion,
+        )
+
+    def _get_unbound_constraint_suggestion(self, change: VersionChange) -> str:
+        """Generate suggestion for unbound version constraints"""
+        if change.new_constraint.strip() == "*":
+            return (
+                "Wildcard constraints are strictly forbidden. "
+                "Use a specific version like '= 1.2.3' or a bounded constraint like '~> 1.2'"
+            )
+        else:
+            return f"Consider using '~> {change.new_version}' to bound to major version"
