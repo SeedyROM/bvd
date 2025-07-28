@@ -38,6 +38,9 @@ class VersionDetector:
                 IssueType.MAJOR_VERSION_BUMP: Severity.CRITICAL,
                 IssueType.MINOR_VERSION_BUMP: Severity.WARNING,
                 IssueType.PATCH_VERSION_BUMP: Severity.INFO,
+                IssueType.MAJOR_VERSION_DOWNGRADE: Severity.CRITICAL,
+                IssueType.MINOR_VERSION_DOWNGRADE: Severity.WARNING,
+                IssueType.PATCH_VERSION_DOWNGRADE: Severity.WARNING,
                 IssueType.UNBOUND_VERSION: Severity.ERROR,
                 IssueType.LOOSE_CONSTRAINT: Severity.WARNING,
             },
@@ -145,12 +148,21 @@ class VersionDetector:
 
         major_diff, minor_diff, patch_diff = version_diff
 
+        # Check for major changes first (upgrades and downgrades)
         if major_diff > 0:
             return IssueType.MAJOR_VERSION_BUMP
+        elif major_diff < 0:
+            return IssueType.MAJOR_VERSION_DOWNGRADE
+        # Then minor changes
         elif minor_diff > 0:
             return IssueType.MINOR_VERSION_BUMP
+        elif minor_diff < 0:
+            return IssueType.MINOR_VERSION_DOWNGRADE
+        # Finally patch changes
         elif patch_diff > 0:
             return IssueType.PATCH_VERSION_BUMP
+        elif patch_diff < 0:
+            return IssueType.PATCH_VERSION_DOWNGRADE
 
         return None
 
@@ -279,15 +291,49 @@ class VersionDetector:
         base_severity = self.config["rules"][issue_type]
         severity = self._resolve_severity(base_severity, change.package_name)
 
-        message = (
-            f"{issue_type.value.replace('_', ' ').title()} detected: "
-            f"{change.package_name} changed from {change.old_version} to {change.new_version}"
-        )
-
-        suggestion = (
-            f"Review breaking changes in {change.package_name} changelog "
-            f"between versions {change.old_version} and {change.new_version}"
-        )
+        # Generate explicit messages based on issue type
+        if "downgrade" in issue_type.value:
+            if issue_type == IssueType.MAJOR_VERSION_DOWNGRADE:
+                message = (
+                    f"Major version downgrade detected: {change.package_name} "
+                    f"downgraded from {change.old_version} to {change.new_version} - "
+                    f"potential feature loss and security vulnerabilities"
+                )
+                suggestion = (
+                    f"Review {change.package_name} changelog for removed features and fixes. "
+                    f"Verify your code doesn't depend on features from {change.old_version}. "
+                    "Consider security implications of missing patches."
+                )
+            elif issue_type == IssueType.MINOR_VERSION_DOWNGRADE:
+                message = (
+                    f"Minor version downgrade detected: {change.package_name} "
+                    f"downgraded from {change.old_version} to {change.new_version} - "
+                    f"potential feature loss and missing bug fixes"
+                )
+                suggestion = (
+                    f"Review {change.package_name} changelog for removed features and bug fixes. "
+                    f"Verify your code doesn't depend on features from {change.old_version}."
+                )
+            else:  # PATCH_VERSION_DOWNGRADE
+                message = (
+                    f"Patch version downgrade detected: {change.package_name} "
+                    f"downgraded from {change.old_version} to {change.new_version} - "
+                    f"missing bug fixes and security patches"
+                )
+                suggestion = (
+                    f"Review {change.package_name} changelog for bug fixes and security patches "
+                    f"that may be missing in version {change.new_version}."
+                )
+        else:
+            # Original upgrade messages
+            message = (
+                f"{issue_type.value.replace('_', ' ').title()} detected: "
+                f"{change.package_name} changed from {change.old_version} to {change.new_version}"
+            )
+            suggestion = (
+                f"Review breaking changes in {change.package_name} changelog "
+                f"between versions {change.old_version} and {change.new_version}"
+            )
 
         return Issue(
             severity=severity,

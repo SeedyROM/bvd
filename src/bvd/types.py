@@ -26,6 +26,9 @@ class IssueType(Enum):
     MAJOR_VERSION_BUMP = "major_version_bump"
     MINOR_VERSION_BUMP = "minor_version_bump"
     PATCH_VERSION_BUMP = "patch_version_bump"
+    MAJOR_VERSION_DOWNGRADE = "major_version_downgrade"
+    MINOR_VERSION_DOWNGRADE = "minor_version_downgrade"
+    PATCH_VERSION_DOWNGRADE = "patch_version_downgrade"
     UNBOUND_VERSION = "unbound_version"
     LOOSE_CONSTRAINT = "loose_constraint"
 

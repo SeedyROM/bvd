@@ -262,7 +262,7 @@ class TestVersionChangeAnalysis:
         detector = VersionDetector()
 
         result = detector.analyze_version_change("2.0.0", "1.0.0")
-        assert result is None  # Downgrades don't trigger issues
+        assert result == IssueType.MAJOR_VERSION_DOWNGRADE  # Downgrades now trigger issues
 
     def test_analyze_version_change_invalid_versions(self):
         """Test handling of invalid version strings"""

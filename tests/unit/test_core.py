@@ -17,8 +17,6 @@ def test_version_detector():
     # Should have terraform parser registered
     assert "Terraform" in detector.parsers
 
-    print("✅ Version detector tests passed")
-
 
 def test_issue_detection():
     """Test issue detection on a real file"""
@@ -48,8 +46,6 @@ terraform {
         # hashicorp/aws is in critical_packages, so severity is CRITICAL
         assert issues[0].severity == Severity.CRITICAL
 
-        print("✅ Issue detection tests passed")
-
     finally:
         temp_path.unlink()
 
@@ -67,8 +63,6 @@ def test_detect_issues_no_matching_parser():
 
         # Should find no issues since no parser matches
         assert len(issues) == 0
-
-        print("✅ No matching parser tests passed")
 
     finally:
         temp_path.unlink()
@@ -97,8 +91,6 @@ def test_detect_issues_processing_error():
         # Should still work with the real Terraform parser
         assert isinstance(issues, list)
 
-        print("✅ Error handling tests passed")
-
     finally:
         temp_path.unlink()
 
@@ -126,8 +118,6 @@ def test_version_detector_custom_config_merge():
 
     # Ignore packages should be set
     assert detector.config["ignore_packages"] == ["ignore/me"]
-
-    print("✅ Config merge tests passed")
 
 
 def test_issue_suggestions_formatting():
@@ -158,8 +148,6 @@ def test_issue_suggestions_formatting():
     # Test that suggestion field is properly set
     assert issue.suggestion == suggestion
     assert "~> 4.0.0" in issue.suggestion
-
-    print("✅ Issue suggestions tests passed")
 
 
 def test_detect_issues_exception_handling():
@@ -194,8 +182,129 @@ def test_detect_issues_exception_handling():
             assert "Test exception" in error_output
             assert str(temp_path) in error_output
 
-        print("✅ Exception handling tests passed")
-
     finally:
         sys.stderr = old_stderr
         temp_path.unlink()
+
+
+def test_analyze_version_change_downgrades():
+    """Test that analyze_version_change correctly detects all types of downgrades"""
+    detector = VersionDetector()
+
+    # Test major version downgrades
+    result = detector.analyze_version_change("2.0.0", "1.0.0")
+    assert result == IssueType.MAJOR_VERSION_DOWNGRADE
+
+    result = detector.analyze_version_change("3.2.1", "1.5.0")
+    assert result == IssueType.MAJOR_VERSION_DOWNGRADE
+
+    # Test minor version downgrades
+    result = detector.analyze_version_change("1.5.0", "1.2.0")
+    assert result == IssueType.MINOR_VERSION_DOWNGRADE
+
+    result = detector.analyze_version_change("1.5.3", "1.2.1")
+    assert result == IssueType.MINOR_VERSION_DOWNGRADE
+
+    # Test patch version downgrades
+    result = detector.analyze_version_change("1.2.5", "1.2.3")
+    assert result == IssueType.PATCH_VERSION_DOWNGRADE
+
+    result = detector.analyze_version_change("1.2.10", "1.2.1")
+    assert result == IssueType.PATCH_VERSION_DOWNGRADE
+
+
+def test_analyze_version_change_precedence():
+    """Test that major changes take precedence over minor/patch"""
+    detector = VersionDetector()
+
+    # Major downgrade should take precedence over minor/patch differences
+    result = detector.analyze_version_change("2.5.3", "1.0.0")
+    assert result == IssueType.MAJOR_VERSION_DOWNGRADE
+
+    result = detector.analyze_version_change("2.0.0", "1.8.9")
+    assert result == IssueType.MAJOR_VERSION_DOWNGRADE
+
+    # Minor downgrade should take precedence over patch differences
+    result = detector.analyze_version_change("1.5.1", "1.2.9")
+    assert result == IssueType.MINOR_VERSION_DOWNGRADE
+
+
+def test_default_config_downgrade_severity():
+    """Test that downgrades have correct default severity"""
+    detector = VersionDetector()
+    config = detector.config["rules"]
+
+    # Major downgrades should be critical
+    assert config[IssueType.MAJOR_VERSION_DOWNGRADE] == Severity.CRITICAL
+
+    # Minor downgrades should be warning
+    assert config[IssueType.MINOR_VERSION_DOWNGRADE] == Severity.WARNING
+
+    # Patch downgrades should be warning (more severe than patch upgrades)
+    assert config[IssueType.PATCH_VERSION_DOWNGRADE] == Severity.WARNING
+    assert config[IssueType.PATCH_VERSION_BUMP] == Severity.INFO  # upgrades are less severe
+
+
+def test_downgrade_issue_messages():
+    """Test that downgrade issues have explicit messaging"""
+    detector = VersionDetector()
+
+    # Test major downgrade message
+    change = VersionChange(
+        package_name="test-package",
+        old_version="2.0.0",
+        new_version="1.0.0",
+        old_constraint=None,
+        new_constraint="= 1.0.0",
+        file_path="test.tf",
+    )
+
+    issue = detector._create_version_change_issue(change)
+    assert issue is not None
+    assert issue.issue_type == IssueType.MAJOR_VERSION_DOWNGRADE
+    assert "Major version downgrade detected" in issue.message
+    assert "potential feature loss and security vulnerabilities" in issue.message
+    assert "security implications" in issue.suggestion
+    assert "removed features" in issue.suggestion
+
+    # Test minor downgrade message
+    change.old_version = "1.5.0"
+    change.new_version = "1.2.0"
+    issue = detector._create_version_change_issue(change)
+    assert issue is not None
+    assert issue.issue_type == IssueType.MINOR_VERSION_DOWNGRADE
+    assert "Minor version downgrade detected" in issue.message
+    assert "potential feature loss and missing bug fixes" in issue.message
+    assert "removed features and bug fixes" in issue.suggestion
+
+    # Test patch downgrade message
+    change.old_version = "1.2.5"
+    change.new_version = "1.2.3"
+    issue = detector._create_version_change_issue(change)
+    assert issue is not None
+    assert issue.issue_type == IssueType.PATCH_VERSION_DOWNGRADE
+    assert "Patch version downgrade detected" in issue.message
+    assert "missing bug fixes and security patches" in issue.message
+    assert "bug fixes and security patches" in issue.suggestion
+
+
+def test_upgrade_messages_unchanged():
+    """Test that upgrade messages are unchanged"""
+    detector = VersionDetector()
+
+    # Test major upgrade message (should be unchanged)
+    change = VersionChange(
+        package_name="test-package",
+        old_version="1.0.0",
+        new_version="2.0.0",
+        old_constraint=None,
+        new_constraint="= 2.0.0",
+        file_path="test.tf",
+    )
+
+    issue = detector._create_version_change_issue(change)
+    assert issue is not None
+    assert issue.issue_type == IssueType.MAJOR_VERSION_BUMP
+    assert "Major Version Bump detected" in issue.message
+    assert "breaking changes" in issue.suggestion
+    assert "changelog" in issue.suggestion
