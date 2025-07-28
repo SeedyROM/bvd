@@ -2,6 +2,7 @@
 Tests for core BVD functionality
 """
 
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -308,3 +309,572 @@ def test_upgrade_messages_unchanged():
     assert "Major Version Bump detected" in issue.message
     assert "breaking changes" in issue.suggestion
     assert "changelog" in issue.suggestion
+
+
+class TestGitDiffFunctionality:
+    """Test git diff related functionality"""
+
+    def test_get_file_content_at_ref_success(self):
+        """Test getting file content from git ref successfully"""
+        detector = VersionDetector()
+
+        # Mock successful git show command
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="file content")
+
+            result = detector.get_file_content_at_ref(Path("test.tf"), "HEAD~1")
+
+            assert result == "file content"
+            mock_run.assert_called_once_with(
+                ["git", "show", "HEAD~1:test.tf"], capture_output=True, text=True, check=True
+            )
+
+    def test_get_file_content_at_ref_failure(self):
+        """Test git show command failure"""
+        detector = VersionDetector()
+
+        # Mock failed git show command
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.CalledProcessError(1, "git")
+
+            result = detector.get_file_content_at_ref(Path("test.tf"), "HEAD~1")
+
+            assert result is None
+
+    def test_get_changed_files_success(self):
+        """Test getting changed files from git diff"""
+        detector = VersionDetector()
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="file1.tf\nfile2.tf\n")
+
+            # Mock Path.exists to return True
+            with patch.object(Path, "exists", return_value=True):
+                result = detector.get_changed_files("HEAD~1")
+
+                assert len(result) == 2
+                assert result[0].name == "file1.tf"
+                assert result[1].name == "file2.tf"
+
+    def test_get_changed_files_nonexistent_files(self):
+        """Test that nonexistent files are filtered out"""
+        detector = VersionDetector()
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="existing.tf\ndeleted.tf\n")
+
+            # Mock exists to return True only for existing.tf
+            def mock_exists(self):
+                return self.name == "existing.tf"
+
+            with patch.object(Path, "exists", mock_exists):
+                result = detector.get_changed_files("HEAD~1")
+
+                assert len(result) == 1
+                assert result[0].name == "existing.tf"
+
+    def test_get_changed_files_git_error(self):
+        """Test handling of git command errors"""
+        detector = VersionDetector()
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.CalledProcessError(1, "git")
+
+            result = detector.get_changed_files("HEAD~1")
+
+            assert result == []
+
+
+class TestDependencyChanges:
+    """Test dependency change detection"""
+
+    def setup_method(self):
+        """Set up test data"""
+        self.old_terraform_content = """
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "= 2.0.0"
+    }
+  }
+}
+"""
+
+        self.new_terraform_content = """
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0.0"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "= 2.1.0"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.0.0"
+    }
+  }
+}
+"""
+
+    def test_get_dependency_changes_with_modifications(self):
+        """Test detecting dependency changes between versions"""
+        detector = VersionDetector()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(self.new_terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            # Mock git show to return old content
+            with patch.object(
+                detector, "get_file_content_at_ref", return_value=self.old_terraform_content
+            ):
+                changes = detector.get_dependency_changes(temp_path, "HEAD~1")
+
+                assert len(changes) == 3  # aws, kubernetes, helm
+
+                # Check AWS version change
+                aws_change = next(c for c in changes if "aws" in c.package_name)
+                assert aws_change.old_version == "4.0.0"
+                assert aws_change.new_version == "5.0.0"
+                assert aws_change.old_constraint == "~> 4.0.0"
+                assert aws_change.new_constraint == "~> 5.0.0"
+
+                # Check Kubernetes version change
+                k8s_change = next(c for c in changes if "kubernetes" in c.package_name)
+                assert k8s_change.old_version == "2.0.0"
+                assert k8s_change.new_version == "2.1.0"
+
+                # Check Helm (new dependency)
+                helm_change = next(c for c in changes if "helm" in c.package_name)
+                assert helm_change.old_version is None  # New dependency
+                assert helm_change.new_version == "2.0.0"
+
+        finally:
+            temp_path.unlink()
+
+    def test_get_dependency_changes_new_file(self):
+        """Test handling of completely new files"""
+        detector = VersionDetector()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(self.new_terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            # Mock git show to return None (file doesn't exist in old ref)
+            with patch.object(detector, "get_file_content_at_ref", return_value=None):
+                changes = detector.get_dependency_changes(temp_path, "HEAD~1")
+
+                assert len(changes) == 3
+                # All should be new dependencies
+                for change in changes:
+                    assert change.old_version is None
+                    assert change.old_constraint is None
+
+        finally:
+            temp_path.unlink()
+
+    def test_get_dependency_changes_no_parser(self):
+        """Test handling files with no matching parser"""
+        detector = VersionDetector()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".unknown", delete=False) as f:
+            f.write("some content")
+            temp_path = Path(f.name)
+
+        try:
+            changes = detector.get_dependency_changes(temp_path, "HEAD~1")
+            assert changes == []
+
+        finally:
+            temp_path.unlink()
+
+    def test_get_dependency_changes_parsing_error(self):
+        """Test handling of parsing errors"""
+        detector = VersionDetector()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write("invalid terraform content")
+            temp_path = Path(f.name)
+
+        try:
+            with patch.object(
+                detector, "get_file_content_at_ref", return_value="old invalid content"
+            ):
+                changes = detector.get_dependency_changes(temp_path, "HEAD~1")
+                # Should handle error gracefully and return empty list
+                assert changes == []
+
+        finally:
+            temp_path.unlink()
+
+
+class TestVersionChangeAnalysis:
+    """Test version change analysis logic"""
+
+    def test_analyze_version_change_major_bump(self):
+        """Test major version bump detection"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("1.0.0", "2.0.0")
+        assert result == IssueType.MAJOR_VERSION_BUMP
+
+        result = detector.analyze_version_change("1.5.3", "2.0.0")
+        assert result == IssueType.MAJOR_VERSION_BUMP
+
+    def test_analyze_version_change_minor_bump(self):
+        """Test minor version bump detection"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("1.0.0", "1.1.0")
+        assert result == IssueType.MINOR_VERSION_BUMP
+
+        result = detector.analyze_version_change("2.5.0", "2.6.0")
+        assert result == IssueType.MINOR_VERSION_BUMP
+
+    def test_analyze_version_change_patch_bump(self):
+        """Test patch version bump detection"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("1.0.0", "1.0.1")
+        assert result == IssueType.PATCH_VERSION_BUMP
+
+        result = detector.analyze_version_change("2.5.3", "2.5.4")
+        assert result == IssueType.PATCH_VERSION_BUMP
+
+    def test_analyze_version_change_no_change(self):
+        """Test identical versions"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("1.0.0", "1.0.0")
+        assert result is None
+
+    def test_analyze_version_change_downgrade(self):
+        """Test version downgrades"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("2.0.0", "1.0.0")
+        assert result == IssueType.MAJOR_VERSION_DOWNGRADE  # Downgrades now trigger issues
+
+    def test_analyze_version_change_invalid_versions(self):
+        """Test handling of invalid version strings"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("invalid", "1.0.0")
+        assert result is None
+
+        result = detector.analyze_version_change("1.0.0", "invalid")
+        assert result is None
+
+        result = detector.analyze_version_change("invalid", "also-invalid")
+        assert result is None
+
+    def test_analyze_version_change_complex_versions(self):
+        """Test complex version strings with pre-release tags"""
+        detector = VersionDetector()
+
+        result = detector.analyze_version_change("1.0.0-alpha", "2.0.0-beta")
+        assert result == IssueType.MAJOR_VERSION_BUMP
+
+        result = detector.analyze_version_change("1.0.0-rc1", "1.1.0")
+        assert result == IssueType.MINOR_VERSION_BUMP
+
+
+class TestEdgeCases:
+    """Test edge cases and error handling"""
+
+    def test_empty_file_handling(self):
+        """Test handling of empty files"""
+        detector = VersionDetector()
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write("")  # Empty file
+            temp_path = Path(f.name)
+
+        try:
+            issues = detector.detect_issues([temp_path])
+            assert issues == []  # Should handle gracefully
+
+        finally:
+            temp_path.unlink()
+
+    def test_malformed_terraform_content(self):
+        """Test handling of malformed Terraform content"""
+        detector = VersionDetector()
+
+        malformed_content = """
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      # Missing closing brace
+    }
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(malformed_content)
+            temp_path = Path(f.name)
+
+        try:
+            # Should not crash, should handle parsing errors gracefully
+            _issues = detector.detect_issues([temp_path])
+            # May return empty list or partial results, but shouldn't crash
+
+        finally:
+            temp_path.unlink()
+
+    def test_terraform_without_providers(self):
+        """Test Terraform files without provider blocks"""
+        detector = VersionDetector()
+
+        terraform_content = """
+resource "aws_instance" "example" {
+  ami           = "ami-12345678"
+  instance_type = "t2.micro"
+}
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            issues = detector.detect_issues([temp_path])
+            assert issues == []  # No providers, no issues
+
+        finally:
+            temp_path.unlink()
+
+    def test_complex_terraform_structure(self):
+        """Test complex Terraform with multiple blocks"""
+        detector = VersionDetector()
+
+        terraform_content = """
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  backend "s3" {
+    bucket = "my-terraform-state"
+    key    = "state"
+    region = "us-west-2"
+  }
+}
+
+terraform {
+  # Another terraform block
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.0"
+    }
+  }
+}
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            issues = detector.detect_issues([temp_path])
+
+            # Should find unbound kubernetes version
+            unbound_issues = [i for i in issues if i.issue_type == IssueType.UNBOUND_VERSION]
+            assert len(unbound_issues) == 1
+            assert "kubernetes" in unbound_issues[0].message
+
+        finally:
+            temp_path.unlink()
+
+    def test_file_reading_errors(self):
+        """Test handling of file reading errors"""
+        detector = VersionDetector()
+
+        # Test with non-existent file
+        fake_path = Path("/non/existent/file.tf")
+
+        # Should handle gracefully without crashing
+        issues = detector.detect_issues([fake_path])
+        assert issues == []
+
+    def test_git_command_unavailable(self):
+        """Test behavior when git command is not available"""
+        detector = VersionDetector()
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git command not found")
+
+            # Should handle gracefully
+            changed_files = detector.get_changed_files()
+            assert changed_files == []
+
+            # Should also handle in get_file_content_at_ref
+            content = detector.get_file_content_at_ref(Path("test.tf"), "HEAD~1")
+            assert content is None
+
+    def test_unicode_content_handling(self):
+        """Test handling of files with unicode content"""
+        detector = VersionDetector()
+
+        terraform_content = """
+# Terraform configuration with unicode: éñüñü
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0.0"  # Comment with unicode: ñ
+    }
+  }
+}
+"""
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".tf", delete=False, encoding="utf-8"
+        ) as f:
+            f.write(terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            # Should handle unicode content without issues
+            issues = detector.detect_issues([temp_path])
+            # Should work normally, finding AWS provider
+            assert len(issues) == 0  # AWS has bound version
+
+        finally:
+            temp_path.unlink()
+
+    def test_large_file_handling(self):
+        """Test handling of large Terraform files"""
+        detector = VersionDetector()
+
+        # Create a large terraform file with many providers
+        terraform_content = """
+terraform {
+  required_providers {
+"""
+
+        # Add 100 providers
+        for i in range(100):
+            terraform_content += f"""
+    provider_{i} = {{
+      source  = "hashicorp/provider_{i}"
+      version = ">= {i}.0.0"
+    }}
+"""
+
+        terraform_content += """
+  }
+}
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            # Should handle large files without performance issues
+            issues = detector.detect_issues([temp_path])
+
+            # Should find 100 unbound version issues
+            unbound_issues = [i for i in issues if i.issue_type == IssueType.UNBOUND_VERSION]
+            assert len(unbound_issues) == 100
+
+        finally:
+            temp_path.unlink()
+
+
+class TestConfigurationEdgeCases:
+    """Test configuration edge cases"""
+
+    def test_empty_config(self):
+        """Test detector with empty configuration"""
+        detector = VersionDetector({})
+
+        # Should use default configuration
+        assert detector.config is not None
+        assert "rules" in detector.config
+
+    def test_partial_config(self):
+        """Test detector with partial configuration"""
+        partial_config = {
+            "rules": {
+                IssueType.MAJOR_VERSION_BUMP: Severity.ERROR,
+            }
+        }
+
+        detector = VersionDetector(partial_config)
+
+        # Should merge with defaults
+        assert detector.config["rules"][IssueType.MAJOR_VERSION_BUMP] == Severity.ERROR
+        # Should have default values for missing keys
+        assert "ignore_packages" in detector.config
+
+    def test_invalid_severity_handling(self):
+        """Test handling of invalid severity values"""
+        # This tests the robustness of the configuration system
+        config = {
+            "rules": {
+                IssueType.MAJOR_VERSION_BUMP: Severity.CRITICAL,
+            },
+            "critical_packages": {
+                "hashicorp/aws": Severity.CRITICAL,
+            },
+            "ignore_packages": [],
+        }
+
+        detector = VersionDetector(config)
+
+        # Should work normally with valid config
+        assert detector.config["rules"][IssueType.MAJOR_VERSION_BUMP] == Severity.CRITICAL
+
+    def test_none_config_values(self):
+        """Test handling of None values in configuration"""
+        config = {
+            "rules": {
+                IssueType.MAJOR_VERSION_BUMP: Severity.CRITICAL,
+            },
+            "critical_packages": None,  # None value
+            "ignore_packages": [],
+        }
+
+        detector = VersionDetector(config)
+
+        # Should handle None values gracefully
+        terraform_content = """
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 4.0.0"
+    }
+  }
+}
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".tf", delete=False) as f:
+            f.write(terraform_content)
+            temp_path = Path(f.name)
+
+        try:
+            # Should not crash with None critical_packages
+            issues = detector.detect_issues([temp_path])
+            assert len(issues) >= 1  # Should find unbound version
+
+        finally:
+            temp_path.unlink()
