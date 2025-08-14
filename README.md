@@ -44,45 +44,40 @@ pip install bvd
 
 ### 💻 Command Line Interface
 
-### Using Makefile (Development Environment) 🛠️
-```bash
-# Run on specific files
-make run -- --files example.tf
-
-# Run on multiple files
-make run -- --files config.tf variables.tf
-
-# Show help
-make run -- --help
-
-# Run with verbose output
-make run -- --files example.tf --verbose
-```
-
-### Direct Usage 🎯
+### Direct Usage 🎯 (Recommended)
 ```bash
 # Run on specific files
 uv run bvd --files example.tf
 
-# Or if installed globally
-bvd --files example.tf
+# Run on multiple files
+uv run bvd --files config.tf variables.tf
 
 # Show help
 uv run bvd --help
+
+# Run with verbose output
+uv run bvd --files example.tf --verbose
+
+# Or if installed globally
+bvd --files example.tf
 ```
+
 
 ### 🔧 Development Commands
 
-This project uses `uv` for dependency management and `make` for common development tasks:
+This project uses `uv` for dependency management and `invoke` for common development tasks:
 
-- `make format` - Format code with ruff
-- `make lint` - Check code style and quality with ruff
-- `make lint-fix` - Fix code style issues automatically
-- `make test` - Run all tests with pytest
-- `make run -- --files example.tf` - Run bvd on specific files
-- `make run -- --help` - Show bvd help
+- `uv run invoke format` - Format code with ruff
+- `uv run invoke lint` - Check code style and quality with ruff
+- `uv run invoke lint-fix` - Fix code style issues automatically
+- `uv run invoke test` - Run all tests with pytest
+- `uv run invoke test --cov` - Run tests with coverage report
+- `uv run invoke test --xml` - Run tests with XML coverage for CI
+- `uv run bvd --files example.tf` - Run bvd on specific files
+- `uv run invoke build` - Build the package
+- `uv run invoke --list` - Show all available tasks
 
-**See [Makefile](Makefile) for all available/source of truth commands on POSIX systems.**
+**See [tasks.py](tasks.py) for all available task definitions.**
 
 ### 🔗 Pre-commit Hooks
 
@@ -128,7 +123,7 @@ To add support for new file formats, create a parser in `src/bvd/parsers/` that 
 
 Run the comprehensive test suite:
 ```bash
-make test              # Run all tests
-make test-cov          # Run with coverage report
-make test -- --verbose # Verbose test output
+uv run invoke test              # Run all tests
+uv run invoke test --cov        # Run with coverage report
+uv run pytest tests/ --verbose  # Verbose test output
 ```

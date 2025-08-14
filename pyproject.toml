@@ -17,6 +17,15 @@ bvd = "bvd.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/bvd"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+  ".python-version",
+  "/.git",
+  "/tests",
+  "*.pyc",
+  "__pycache__"
+]
+
 [tool.ruff]
 line-length = 100
 
@@ -41,6 +50,7 @@ precision = 2
 
 [dependency-groups]
 dev = [
+    "invoke~=2.2.0",
     "pre-commit~=4.2.0",
     "psutil~=7.0.0",
     "pytest~=8.4.1",
