@@ -55,6 +55,6 @@ dev = [
     "psutil~=7.0.0",
     "pytest~=8.4.1",
     "pytest-cov~=6.2.0",
-    "ruff~=0.12.5",
+    "ruff~=0.13.1",
     "types-psutil~=7.0.0.20250601",
 ]
