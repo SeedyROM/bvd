@@ -39,7 +39,7 @@ jobs:
       run: uv run safety check --json --output safety-report.json || true
 
     - name: Upload safety report
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: safety-report
@@ -52,7 +52,7 @@ jobs:
       run: uv run pip-audit --format=json --output=pip-audit-report.json || true
 
     - name: Upload pip-audit report
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: pip-audit-report
@@ -86,7 +86,7 @@ jobs:
         uv run bandit -r src/ -f txt || true
 
     - name: Upload bandit report
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: bandit-report
@@ -190,7 +190,7 @@ jobs:
         uv run cyclonedx-py -o sbom.json
 
     - name: Upload SBOM
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: sbom
         path: sbom.json
@@ -223,7 +223,7 @@ jobs:
         uv run pip-licenses --format=plain-vertical
 
     - name: Upload license report
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: license-report
         path: licenses.json
@@ -260,7 +260,7 @@ jobs:
         ls -la || true
 
     - name: Upload security summary
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: security-summary
         path: security-summary.md
